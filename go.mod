@@ -167,3 +167,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 )
+
+replace github.com/cli/go-internal => /Users/williammartin/workspace/go-internal

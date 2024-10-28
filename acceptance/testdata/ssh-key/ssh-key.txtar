@@ -1,4 +1,4 @@
-skip 'it modifies the user''s personal GitHub account SSH keys'
+[!personal] skip 'if not personal because it modifies the users personal GitHub account SSH keys'
 
 # scopes admin:ssh_signing_key,admin:public_key
 
@@ -20,5 +20,6 @@ exec gh ssh-key delete --yes ${SSH_KEY_ID}
 exec gh ssh-key list
 ! stdout 'acceptance-test-key'
 
+# Consider generating this, since we shouldn't be asking random people to set this
 -- sshKey.pub --
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAZmdeRNskfpvYL5YHB/YJaW8hTEXpnvPMkx5Ri+YwUr acceptance

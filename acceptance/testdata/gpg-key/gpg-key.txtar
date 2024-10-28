@@ -1,7 +1,7 @@
-skip 'it modifies the user''s personal GitHub account GPG keys'
+[!personal] skip 'if not personal because it modifies the users personal GitHub account GPG keys'
 
 # This test requires the admin:gpg_key scope to add and delete GPG keys to and
-# from the user's personal GitHub account. 
+# from the user's personal GitHub account.
 # This test uses a GPG key that generated for this test only. The private key
 # has been deleted
 

@@ -27,157 +27,37 @@ func TestMain(m *testing.M) {
 	}))
 }
 
-func TestAPI(t *testing.T) {
+func TestAcceptance(t *testing.T) {
 	var tsEnv testScriptEnv
 	if err := tsEnv.fromEnv(); err != nil {
 		t.Fatal(err)
 	}
 
-	testscript.Run(t, testScriptParamsFor(tsEnv, "api"))
-}
-
-func TestAuth(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
+	tests := []string{
+		"api",
+		"auth",
+		"gpg-key",
+		"extension",
+		"issue",
+		"label",
+		"org",
+		"project",
+		"pr",
+		"release",
+		"repo",
+		"ruleset",
+		"search",
+		"secret",
+		"ssh-key",
+		"variable",
+		"workflow",
 	}
 
-	testscript.Run(t, testScriptParamsFor(tsEnv, "auth"))
-}
-
-func TestGPGKeys(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
+	for _, test := range tests {
+		t.Run(test, func(t *testing.T) {
+			testscript.Run(t, testScriptParamsFor(tsEnv, test))
+		})
 	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "gpg-key"))
-}
-
-func TestExtensions(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "extension"))
-}
-
-func TestIssues(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "pr"))
-}
-
-func TestLabels(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "label"))
-}
-
-func TestOrg(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "org"))
-}
-
-func TestProject(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "project"))
-}
-
-func TestPullRequests(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "pr"))
-}
-
-func TestReleases(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "release"))
-}
-
-func TestRepo(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "repo"))
-}
-
-func TestRulesets(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "ruleset"))
-}
-
-func TestSearches(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "search"))
-}
-
-func TestSecrets(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "secret"))
-}
-
-func TestSSHKeys(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "ssh-key"))
-}
-
-func TestVariables(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "variable"))
-}
-
-func TestWorkflows(t *testing.T) {
-	var tsEnv testScriptEnv
-	if err := tsEnv.fromEnv(); err != nil {
-		t.Fatal(err)
-	}
-
-	testscript.Run(t, testScriptParamsFor(tsEnv, "workflow"))
 }
 
 func testScriptParamsFor(tsEnv testScriptEnv, command string) testscript.Params {
@@ -195,10 +75,12 @@ func testScriptParamsFor(tsEnv testScriptEnv, command string) testscript.Params 
 		Dir:                 dir,
 		Files:               files,
 		Setup:               sharedSetup(tsEnv),
+		Condition:           sharedCondition(tsEnv),
 		Cmds:                sharedCmds(tsEnv),
 		RequireExplicitExec: true,
 		RequireUniqueNames:  true,
 		TestWork:            tsEnv.preserveWorkDir,
+		Serialise:           tsEnv.serialise,
 	}
 }
 
@@ -226,6 +108,18 @@ func sharedSetup(tsEnv testScriptEnv) func(ts *testscript.Env) error {
 
 		ts.Values[keyT] = ts.T()
 		return nil
+	}
+}
+
+func sharedCondition(tsEnv testScriptEnv) func(string) (bool, error) {
+	return func(cond string) (bool, error) {
+		fmt.Println("condition", cond)
+		switch cond {
+		case "personal":
+			return tsEnv.personal, nil
+		default:
+			return false, fmt.Errorf("unknown condition %q", cond)
+		}
 	}
 }
 
@@ -377,6 +271,10 @@ type testScriptEnv struct {
 
 	script string
 
+	serialise bool
+
+	personal bool
+
 	skipDefer       bool
 	preserveWorkDir bool
 }
@@ -412,6 +310,9 @@ func (e *testScriptEnv) fromEnv() error {
 	e.host = envMap["GH_ACCEPTANCE_HOST"]
 	e.org = envMap["GH_ACCEPTANCE_ORG"]
 	e.token = envMap["GH_ACCEPTANCE_TOKEN"]
+
+	e.serialise = os.Getenv("GH_ACCEPTANCE_SERIALISE") == "true"
+	e.personal = os.Getenv("GH_ACCEPTANCE_PERSONAL") == "true"
 
 	e.script = os.Getenv("GH_ACCEPTANCE_SCRIPT")
 	e.preserveWorkDir = os.Getenv("GH_ACCEPTANCE_PRESERVE_WORK_DIR") == "true"
