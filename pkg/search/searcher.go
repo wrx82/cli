@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	maxPerPage = 100
-	orderKey   = "order"
-	sortKey    = "sort"
+	defaultPerPage = 100
+	orderKey       = "order"
+	sortKey        = "sort"
 )
 
 var linkRE = regexp.MustCompile(`<([^>]+)>;\s*rel="([^"]+)"`)
@@ -64,7 +64,7 @@ func (s searcher) Code(query Query) (CodeResult, error) {
 	var resp *http.Response
 	var err error
 	for toRetrieve > 0 {
-		query.Limit = min(toRetrieve, maxPerPage)
+		query.Limit = min(toRetrieve, defaultPerPage)
 		query.Page = nextPage(resp)
 		if query.Page == 0 {
 			break
@@ -88,7 +88,7 @@ func (s searcher) Commits(query Query) (CommitsResult, error) {
 	var resp *http.Response
 	var err error
 	for toRetrieve > 0 {
-		query.Limit = min(toRetrieve, maxPerPage)
+		query.Limit = min(toRetrieve, defaultPerPage)
 		query.Page = nextPage(resp)
 		if query.Page == 0 {
 			break
@@ -112,7 +112,7 @@ func (s searcher) Repositories(query Query) (RepositoriesResult, error) {
 	var resp *http.Response
 	var err error
 	for toRetrieve > 0 {
-		query.Limit = min(toRetrieve, maxPerPage)
+		query.Limit = min(toRetrieve, defaultPerPage)
 		query.Page = nextPage(resp)
 		if query.Page == 0 {
 			break
@@ -131,26 +131,52 @@ func (s searcher) Repositories(query Query) (RepositoriesResult, error) {
 }
 
 func (s searcher) Issues(query Query) (IssuesResult, error) {
-	result := IssuesResult{}
-	toRetrieve := query.Limit
+	requestedLimit := query.Limit
+	toRetrieve := requestedLimit
+
 	var resp *http.Response
 	var err error
-	for toRetrieve > 0 {
-		query.Limit = min(toRetrieve, maxPerPage)
-		query.Page = nextPage(resp)
-		if query.Page == 0 {
+
+	result := IssuesResult{}
+
+	for {
+		// If we don't need any more results, we're done
+		if toRetrieve == 0 {
 			break
 		}
-		page := IssuesResult{}
+
+		// If there are no further pages, we're out of results, so we're done
+		pageNumber, hasNextPage := nextPageOk(resp)
+		if !hasNextPage {
+			break
+		}
+		query.Page = pageNumber
+
+		// We will request either the limit if it's less than 1 page, or our default page
+		// size. This means that for result sets larger than our default page size, we will
+		// have a stable cursor offset.
+		perPage := min(requestedLimit, defaultPerPage)
+		query.Limit = perPage
+
+		var page IssuesResult
 		resp, err = s.search(query, &page)
 		if err != nil {
+			// Return whatever results have been aggregated so far.
+			// TODO: investigate whether anyone actually uses this, or if it
+			// is just unidiomatic.
 			return result, err
 		}
+
 		result.IncompleteResults = page.IncompleteResults
 		result.Total = page.Total
-		result.Items = append(result.Items, page.Items...)
-		toRetrieve = toRetrieve - len(page.Items)
+
+		// If we're going to reach the requested limit, only add that many items,
+		// otherwise add all the results.
+		itemsToAdd := min(len(page.Items), toRetrieve)
+		result.Items = append(result.Items, page.Items[:itemsToAdd]...)
+		toRetrieve = toRetrieve - itemsToAdd
 	}
+
 	return result, nil
 }
 
@@ -253,6 +279,25 @@ func nextPage(resp *http.Response) (page int) {
 		}
 	}
 	return 0
+}
+
+func nextPageOk(resp *http.Response) (int, bool) {
+	if resp == nil {
+		return 1, true
+	}
+	for _, m := range linkRE.FindAllStringSubmatch(resp.Header.Get("Link"), -1) {
+		if !(len(m) > 2 && m[2] == "next") {
+			continue
+		}
+		p := pageRE.FindStringSubmatch(m[1])
+		if len(p) == 3 {
+			i, err := strconv.Atoi(p[2])
+			if err == nil {
+				return i, true
+			}
+		}
+	}
+	return 0, false
 }
 
 func min(a, b int) int {
