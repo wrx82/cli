@@ -109,7 +109,7 @@ func TestSearcherCode(t *testing.T) {
 			},
 		},
 		{
-			name: "paginates results until limit",
+			name: "collects results until limit",
 			query: Query{
 				Keywords: []string{"keyword"},
 				Kind:     "code",
@@ -296,7 +296,7 @@ func TestSearcherCommits(t *testing.T) {
 			},
 		},
 		{
-			name: "paginates results until limit",
+			name: "collects results until limit",
 			query: Query{
 				Keywords: []string{"keyword"},
 				Kind:     "commits",
@@ -502,7 +502,7 @@ func TestSearcherRepositories(t *testing.T) {
 			},
 		},
 		{
-			name: "paginates results until limit",
+			name: "collects results until limit",
 			query: Query{
 				Keywords: []string{"keyword"},
 				Kind:     "repositories",
@@ -698,7 +698,7 @@ func TestSearcherIssues(t *testing.T) {
 			},
 		},
 		{
-			name: "paginates results until limit",
+			name: "collects results until limit",
 			query: Query{
 				Keywords: []string{"keyword"},
 				Kind:     "issues",

@@ -74,7 +74,7 @@ func (s searcher) Code(query Query) (CodeResult, error) {
 		}
 
 		// If there are no further pages, we're out of results, so we're done
-		pageNumber, hasNextPage := nextPageOk(resp)
+		pageNumber, hasNextPage := nextPage(resp)
 		if !hasNextPage {
 			break
 		}
@@ -124,7 +124,7 @@ func (s searcher) Commits(query Query) (CommitsResult, error) {
 		}
 
 		// If there are no further pages, we're out of results, so we're done
-		pageNumber, hasNextPage := nextPageOk(resp)
+		pageNumber, hasNextPage := nextPage(resp)
 		if !hasNextPage {
 			break
 		}
@@ -174,7 +174,7 @@ func (s searcher) Repositories(query Query) (RepositoriesResult, error) {
 		}
 
 		// If there are no further pages, we're out of results, so we're done
-		pageNumber, hasNextPage := nextPageOk(resp)
+		pageNumber, hasNextPage := nextPage(resp)
 		if !hasNextPage {
 			break
 		}
@@ -224,7 +224,7 @@ func (s searcher) Issues(query Query) (IssuesResult, error) {
 		}
 
 		// If there are no further pages, we're out of results, so we're done
-		pageNumber, hasNextPage := nextPageOk(resp)
+		pageNumber, hasNextPage := nextPage(resp)
 		if !hasNextPage {
 			break
 		}
@@ -340,26 +340,7 @@ func handleHTTPError(resp *http.Response) error {
 	return httpError
 }
 
-func nextPage(resp *http.Response) (page int) {
-	if resp == nil {
-		return 1
-	}
-	for _, m := range linkRE.FindAllStringSubmatch(resp.Header.Get("Link"), -1) {
-		if !(len(m) > 2 && m[2] == "next") {
-			continue
-		}
-		p := pageRE.FindStringSubmatch(m[1])
-		if len(p) == 3 {
-			i, err := strconv.Atoi(p[2])
-			if err == nil {
-				return i
-			}
-		}
-	}
-	return 0
-}
-
-func nextPageOk(resp *http.Response) (int, bool) {
+func nextPage(resp *http.Response) (int, bool) {
 	if resp == nil {
 		return 1, true
 	}
