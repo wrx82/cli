@@ -83,26 +83,52 @@ func (s searcher) Code(query Query) (CodeResult, error) {
 }
 
 func (s searcher) Commits(query Query) (CommitsResult, error) {
-	result := CommitsResult{}
-	toRetrieve := query.Limit
+	requestedLimit := query.Limit
+	toRetrieve := requestedLimit
+
 	var resp *http.Response
 	var err error
-	for toRetrieve > 0 {
-		query.Limit = min(toRetrieve, defaultPerPage)
-		query.Page = nextPage(resp)
-		if query.Page == 0 {
+
+	result := CommitsResult{}
+
+	for {
+		// If we don't need any more results, we're done
+		if toRetrieve == 0 {
 			break
 		}
-		page := CommitsResult{}
+
+		// If there are no further pages, we're out of results, so we're done
+		pageNumber, hasNextPage := nextPageOk(resp)
+		if !hasNextPage {
+			break
+		}
+		query.Page = pageNumber
+
+		// We will request either the limit if it's less than 1 page, or our default page
+		// size. This means that for result sets larger than our default page size, we will
+		// have a stable cursor offset.
+		perPage := min(requestedLimit, defaultPerPage)
+		query.Limit = perPage
+
+		var page CommitsResult
 		resp, err = s.search(query, &page)
 		if err != nil {
+			// Return whatever results have been aggregated so far.
+			// TODO: investigate whether anyone actually uses this, or if it
+			// is just unidiomatic.
 			return result, err
 		}
+
 		result.IncompleteResults = page.IncompleteResults
 		result.Total = page.Total
-		result.Items = append(result.Items, page.Items...)
-		toRetrieve = toRetrieve - len(page.Items)
+
+		// If we're going to reach the requested limit, only add that many items,
+		// otherwise add all the results.
+		itemsToAdd := min(len(page.Items), toRetrieve)
+		result.Items = append(result.Items, page.Items[:itemsToAdd]...)
+		toRetrieve = toRetrieve - itemsToAdd
 	}
+
 	return result, nil
 }
 

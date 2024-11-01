@@ -231,7 +231,7 @@ func TestSearcherCommits(t *testing.T) {
 			},
 		},
 		{
-			name:  "paginates results",
+			name:  "paginates results until no more results",
 			query: query,
 			result: CommitsResult{
 				IncompleteResults: false,
@@ -249,7 +249,7 @@ func TestSearcherCommits(t *testing.T) {
 				firstRes = httpmock.WithHeader(firstRes, "Link", `<https://api.github.com/search/commits?page=2&per_page=100&q=org%3Agithub>; rel="next"`)
 				secondReq := httpmock.QueryMatcher("GET", "search/commits", url.Values{
 					"page":     []string{"2"},
-					"per_page": []string{"29"},
+					"per_page": []string{"30"},
 					"order":    []string{"desc"},
 					"sort":     []string{"committer-date"},
 					"q":        []string{"keyword author:foobar committer-date:>2021-02-28"},
@@ -263,6 +263,41 @@ func TestSearcherCommits(t *testing.T) {
 				)
 				reg.Register(firstReq, firstRes)
 				reg.Register(secondReq, secondRes)
+			},
+		},
+		{
+			name: "paginates results until limit",
+			query: Query{
+				Keywords: []string{"keyword"},
+				Kind:     "commits",
+				Limit:    1,
+				Order:    "desc",
+				Sort:     "committer-date",
+				Qualifiers: Qualifiers{
+					Author:        "foobar",
+					CommitterDate: ">2021-02-28",
+				},
+			},
+			result: CommitsResult{
+				IncompleteResults: false,
+				Items:             []Commit{{Sha: "abc"}},
+				Total:             2,
+			},
+			httpStubs: func(reg *httpmock.Registry) {
+				firstReq := httpmock.QueryMatcher("GET", "search/commits", url.Values{
+					"page":     []string{"1"},
+					"per_page": []string{"1"},
+					"order":    []string{"desc"},
+					"sort":     []string{"committer-date"},
+					"q":        []string{"keyword author:foobar committer-date:>2021-02-28"},
+				})
+				firstRes := httpmock.JSONResponse(CommitsResult{
+					IncompleteResults: false,
+					Items:             []Commit{{Sha: "abc"}},
+					Total:             2,
+				})
+				firstRes = httpmock.WithHeader(firstRes, "Link", `<https://api.github.com/search/commits?page=2&per_page=100&q=org%3Agithub>; rel="next"`)
+				reg.Register(firstReq, firstRes)
 			},
 		},
 		{
