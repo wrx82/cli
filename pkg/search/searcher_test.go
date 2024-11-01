@@ -76,7 +76,7 @@ func TestSearcherCode(t *testing.T) {
 			},
 		},
 		{
-			name:  "paginates results",
+			name:  "paginates results until no more results",
 			query: query,
 			result: CodeResult{
 				IncompleteResults: false,
@@ -94,7 +94,7 @@ func TestSearcherCode(t *testing.T) {
 				firstRes = httpmock.WithHeader(firstRes, "Link", `<https://api.github.com/search/code?page=2&per_page=100&q=org%3Agithub>; rel="next"`)
 				secondReq := httpmock.QueryMatcher("GET", "search/code", url.Values{
 					"page":     []string{"2"},
-					"per_page": []string{"29"},
+					"per_page": []string{"30"},
 					"q":        []string{"keyword language:go"},
 				},
 				)
@@ -106,6 +106,36 @@ func TestSearcherCode(t *testing.T) {
 				)
 				reg.Register(firstReq, firstRes)
 				reg.Register(secondReq, secondRes)
+			},
+		},
+		{
+			name: "paginates results until limit",
+			query: Query{
+				Keywords: []string{"keyword"},
+				Kind:     "code",
+				Limit:    1,
+				Qualifiers: Qualifiers{
+					Language: "go",
+				},
+			},
+			result: CodeResult{
+				IncompleteResults: false,
+				Items:             []Code{{Name: "file.go"}},
+				Total:             2,
+			},
+			httpStubs: func(reg *httpmock.Registry) {
+				firstReq := httpmock.QueryMatcher("GET", "search/code", url.Values{
+					"page":     []string{"1"},
+					"per_page": []string{"1"},
+					"q":        []string{"keyword language:go"},
+				})
+				firstRes := httpmock.JSONResponse(CodeResult{
+					IncompleteResults: false,
+					Items:             []Code{{Name: "file.go"}},
+					Total:             2,
+				})
+				firstRes = httpmock.WithHeader(firstRes, "Link", `<https://api.github.com/search/code?page=2&per_page=100&q=org%3Agithub>; rel="next"`)
+				reg.Register(firstReq, firstRes)
 			},
 		},
 		{
