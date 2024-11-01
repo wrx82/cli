@@ -396,7 +396,7 @@ func TestSearcherRepositories(t *testing.T) {
 			},
 		},
 		{
-			name:  "paginates results",
+			name:  "paginates results until no more pages",
 			query: query,
 			result: RepositoriesResult{
 				IncompleteResults: false,
@@ -417,7 +417,7 @@ func TestSearcherRepositories(t *testing.T) {
 				firstRes = httpmock.WithHeader(firstRes, "Link", `<https://api.github.com/search/repositories?page=2&per_page=100&q=org%3Agithub>; rel="next"`)
 				secondReq := httpmock.QueryMatcher("GET", "search/repositories", url.Values{
 					"page":     []string{"2"},
-					"per_page": []string{"29"},
+					"per_page": []string{"30"},
 					"order":    []string{"desc"},
 					"sort":     []string{"stars"},
 					"q":        []string{"keyword stars:>=5 topic:topic"},
@@ -434,6 +434,45 @@ func TestSearcherRepositories(t *testing.T) {
 				})
 				reg.Register(firstReq, firstRes)
 				reg.Register(secondReq, secondRes)
+			},
+		},
+		{
+			name: "paginates results until limit",
+			query: Query{
+				Keywords: []string{"keyword"},
+				Kind:     "repositories",
+				Limit:    1,
+				Order:    "desc",
+				Sort:     "stars",
+				Qualifiers: Qualifiers{
+					Stars: ">=5",
+					Topic: []string{"topic"},
+				},
+			},
+			result: RepositoriesResult{
+				IncompleteResults: false,
+				Items:             []Repository{{Name: "test"}},
+				Total:             2,
+			},
+			httpStubs: func(reg *httpmock.Registry) {
+				firstReq := httpmock.QueryMatcher("GET", "search/repositories", url.Values{
+					"page":     []string{"1"},
+					"per_page": []string{"1"},
+					"order":    []string{"desc"},
+					"sort":     []string{"stars"},
+					"q":        []string{"keyword stars:>=5 topic:topic"},
+				})
+				firstRes := httpmock.JSONResponse(map[string]interface{}{
+					"incomplete_results": false,
+					"total_count":        2,
+					"items": []interface{}{
+						map[string]interface{}{
+							"name": "test",
+						},
+					},
+				})
+				firstRes = httpmock.WithHeader(firstRes, "Link", `<https://api.github.com/search/repositories?page=2&per_page=100&q=org%3Agithub>; rel="next"`)
+				reg.Register(firstReq, firstRes)
 			},
 		},
 		{
