@@ -182,10 +182,10 @@ func TestSearcherCode(t *testing.T) {
 			searcher := NewSearcher(client, tt.host)
 			result, err := searcher.Code(tt.query)
 			if tt.wantErr {
-				assert.EqualError(t, err, tt.errMsg)
+				require.EqualError(t, err, tt.errMsg)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.result, result)
 		})
 	}
@@ -374,10 +374,10 @@ func TestSearcherCommits(t *testing.T) {
 			searcher := NewSearcher(client, tt.host)
 			result, err := searcher.Commits(tt.query)
 			if tt.wantErr {
-				assert.EqualError(t, err, tt.errMsg)
+				require.EqualError(t, err, tt.errMsg)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.result, result)
 		})
 	}
@@ -584,10 +584,10 @@ func TestSearcherRepositories(t *testing.T) {
 			searcher := NewSearcher(client, tt.host)
 			result, err := searcher.Repositories(tt.query)
 			if tt.wantErr {
-				assert.EqualError(t, err, tt.errMsg)
+				require.EqualError(t, err, tt.errMsg)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.result, result)
 		})
 	}
