@@ -357,6 +357,41 @@ func Test_runDownload(t *testing.T) {
 			wantErr:       "no artifact matches any of the names or patterns provided",
 		},
 		{
+			name: "avoid redownloading files of the same name",
+			opts: DownloadOptions{
+				RunID: "2345",
+			},
+			platform: &fakePlatform{
+				runArtifacts: map[string][]testArtifact{
+					"2345": {
+						{
+							artifact: shared.Artifact{
+								Name:        "artifact-1",
+								DownloadURL: "http://download.com/artifact1.zip",
+								Expired:     false,
+							},
+							files: []string{
+								"artifact-1",
+							},
+						},
+						{
+							artifact: shared.Artifact{
+								Name:        "artifact-1",
+								DownloadURL: "http://download.com/artifact2.zip",
+								Expired:     false,
+							},
+							files: []string{
+								"artifact-2",
+							},
+						},
+					},
+				},
+			},
+			expectedFiles: []string{
+				filepath.Join("artifact-1", "artifact-1"),
+			},
+		},
+		{
 			name: "prompt to select artifact",
 			opts: DownloadOptions{
 				RunID:    "",
@@ -438,6 +473,10 @@ func Test_runDownload(t *testing.T) {
 				require.NoError(t, err)
 			}
 
+			// Check that the exact number of files exist
+			require.Equal(t, len(tt.expectedFiles), countFilesInDirRecursively(t, opts.DestinationDir))
+
+			// Then check that the exact files are correct
 			for _, name := range tt.expectedFiles {
 				require.FileExists(t, filepath.Join(opts.DestinationDir, name))
 			}
@@ -446,4 +485,19 @@ func Test_runDownload(t *testing.T) {
 			assert.Equal(t, "", stderr.String())
 		})
 	}
+}
+
+func countFilesInDirRecursively(t *testing.T, dir string) int {
+	t.Helper()
+
+	count := 0
+	require.NoError(t, filepath.Walk(dir, func(_ string, info os.FileInfo, err error) error {
+		require.NoError(t, err)
+		if !info.IsDir() {
+			count++
+		}
+		return nil
+	}))
+
+	return count
 }
