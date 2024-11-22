@@ -82,6 +82,8 @@ func getPerm(m os.FileMode) os.FileMode {
 	return execMode
 }
 
+// TODO: This isn't actually used anywhere, I just wanted to use the tests
+// and see if they worked for Canonicalise.
 func filepathDescendsFrom(p, dir string) bool {
 	cP, err := filepaths.Canonicalise(p, filepaths.MissingOk)
 	mustNot(err)
