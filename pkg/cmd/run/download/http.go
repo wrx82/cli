@@ -22,11 +22,11 @@ func (p *apiPlatform) List(runID string) ([]shared.Artifact, error) {
 	return shared.ListArtifacts(p.client, p.repo, runID)
 }
 
-func (p *apiPlatform) Download(url string, dir filepaths.CanonicalisedPath) error {
+func (p *apiPlatform) Download(url string, dir filepaths.Canonicalised) error {
 	return downloadArtifact(p.client, url, dir)
 }
 
-func downloadArtifact(httpClient *http.Client, url string, destDir filepaths.CanonicalisedPath) error {
+func downloadArtifact(httpClient *http.Client, url string, destDir filepaths.Canonicalised) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err

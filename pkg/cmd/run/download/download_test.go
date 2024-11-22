@@ -188,7 +188,7 @@ func (f *fakePlatform) List(runID string) ([]shared.Artifact, error) {
 	return artifacts, nil
 }
 
-func (f *fakePlatform) Download(url string, dir filepaths.CanonicalisedPath) error {
+func (f *fakePlatform) Download(url string, dir filepaths.Canonicalised) error {
 	if err := os.MkdirAll(dir.String(), 0755); err != nil {
 		return err
 	}
@@ -572,7 +572,7 @@ func countFilesInDirRecursively(t *testing.T, dir string) int {
 	return count
 }
 
-func mustCanonicalise(path string) filepaths.CanonicalisedPath {
+func mustCanonicalise(path string) filepaths.Canonicalised {
 	c, err := filepaths.Canonicalise(path, filepaths.MissingOk)
 	if err != nil {
 		panic(err)

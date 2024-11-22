@@ -41,7 +41,7 @@ func (e CanonicalisationError) Error() string {
 	return fmt.Sprintf("could not canonicalise path %q due to %v", e.AttemptedPath, e.UnderlyingError)
 }
 
-func Canonicalise(path string, missingStrategy MissingStrategy) (CanonicalisedPath, error) {
+func Canonicalise(path string, missingStrategy MissingStrategy) (Canonicalised, error) {
 	if missingStrategy == nil {
 		panic("missingStrategy must not be nil")
 	}
@@ -54,33 +54,33 @@ func Canonicalise(path string, missingStrategy MissingStrategy) (CanonicalisedPa
 	symlinkEvaledPath, err := filepath.EvalSymlinks(absPath)
 	if err != nil {
 		if missingStrategy == MissingOk && os.IsNotExist(err) {
-			return canonicalisedPath{path: absPath}, nil
+			return canonicalised{path: absPath}, nil
 		}
 
 		return nil, CanonicalisationError{AttemptedPath: absPath, UnderlyingError: err}
 	}
 
-	return canonicalisedPath{path: symlinkEvaledPath}, nil
+	return canonicalised{path: symlinkEvaledPath}, nil
 }
 
-type CanonicalisedPath interface {
-	canonicalisedPathSealed()
+type Canonicalised interface {
+	canonicalisedSealed()
 	String() string
-	IsAncestorOf(CanonicalisedPath) (bool, error)
-	Join(string, MissingStrategy) (CanonicalisedPath, error)
+	IsAncestorOf(Canonicalised) (bool, error)
+	Join(string, MissingStrategy) (Canonicalised, error)
 }
 
-type canonicalisedPath struct {
+type canonicalised struct {
 	path string
 }
 
-func (c canonicalisedPath) canonicalisedPathSealed() {}
+func (c canonicalised) canonicalisedSealed() {}
 
-func (c canonicalisedPath) String() string {
+func (c canonicalised) String() string {
 	return c.path
 }
 
-func (c canonicalisedPath) IsAncestorOf(other CanonicalisedPath) (bool, error) {
+func (c canonicalised) IsAncestorOf(other Canonicalised) (bool, error) {
 	relativePath, err := filepath.Rel(c.path, other.String())
 	if err != nil {
 		// TODO: maybe wrap this, not sure
@@ -89,6 +89,6 @@ func (c canonicalisedPath) IsAncestorOf(other CanonicalisedPath) (bool, error) {
 	return !strings.HasPrefix(relativePath, ".."), nil
 }
 
-func (c canonicalisedPath) Join(path string, missingStrategy MissingStrategy) (CanonicalisedPath, error) {
+func (c canonicalised) Join(path string, missingStrategy MissingStrategy) (Canonicalised, error) {
 	return Canonicalise(filepath.Join(c.path, path), missingStrategy)
 }

@@ -80,7 +80,7 @@ func TestCanonicalisationMissingPaths(t *testing.T) {
 	require.Equal(t, "/presumably/nonexistent/path", canonicalisedPath.String())
 }
 
-func canonicalisedTempDir(t *testing.T) filepaths.CanonicalisedPath {
+func canonicalisedTempDir(t *testing.T) filepaths.Canonicalised {
 	t.Helper()
 
 	tempDir := t.TempDir()

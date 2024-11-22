@@ -21,14 +21,14 @@ type DownloadOptions struct {
 
 	DoPrompt       bool
 	RunID          string
-	DestinationDir filepaths.CanonicalisedPath
+	DestinationDir filepaths.Canonicalised
 	Names          []string
 	FilePatterns   []string
 }
 
 type platform interface {
 	List(runID string) ([]shared.Artifact, error)
-	Download(url string, dir filepaths.CanonicalisedPath) error
+	Download(url string, dir filepaths.Canonicalised) error
 }
 type iprompter interface {
 	MultiSelect(string, []string, []string) ([]int, error)

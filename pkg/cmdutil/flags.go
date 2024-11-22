@@ -47,7 +47,7 @@ func StringSliceEnumFlag(cmd *cobra.Command, p *[]string, name, shorthand string
 }
 
 // CanonicalisedPathFlag defines a new flag that has a canonicalised file path as its value
-func CanonicalisedPathFlag(cmd *cobra.Command, path *filepaths.CanonicalisedPath, name string, shorthand string, defaultValue filepaths.CanonicalisedPath, missingOk bool, usage string) *pflag.Flag {
+func CanonicalisedPathFlag(cmd *cobra.Command, path *filepaths.Canonicalised, name string, shorthand string, defaultValue filepaths.Canonicalised, missingOk bool, usage string) *pflag.Flag {
 	*path = defaultValue
 	val := &canonicalisedPathValue{missingOk: missingOk, path: path}
 	f := cmd.Flags().VarPF(val, name, shorthand, usage)
@@ -56,7 +56,7 @@ func CanonicalisedPathFlag(cmd *cobra.Command, path *filepaths.CanonicalisedPath
 
 type canonicalisedPathValue struct {
 	missingOk bool
-	path      *filepaths.CanonicalisedPath
+	path      *filepaths.Canonicalised
 }
 
 func (v *canonicalisedPathValue) Set(value string) error {

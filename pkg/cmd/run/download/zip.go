@@ -16,7 +16,7 @@ const (
 	execMode os.FileMode = 0755
 )
 
-func extractZip(zr *zip.Reader, destDir filepaths.CanonicalisedPath) error {
+func extractZip(zr *zip.Reader, destDir filepaths.Canonicalised) error {
 	for _, zf := range zr.File {
 		fpath, err := destDir.Join(filepath.FromSlash(zf.Name), filepaths.MissingOk)
 		if err != nil {
@@ -39,7 +39,7 @@ func extractZip(zr *zip.Reader, destDir filepaths.CanonicalisedPath) error {
 	return nil
 }
 
-func extractZipFile(zf *zip.File, dest filepaths.CanonicalisedPath) (extractErr error) {
+func extractZipFile(zf *zip.File, dest filepaths.Canonicalised) (extractErr error) {
 	zm := zf.Mode()
 	if zm.IsDir() {
 		extractErr = os.MkdirAll(dest.String(), dirMode)
