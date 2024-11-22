@@ -59,26 +59,32 @@ func TestCanonicalisationHappyPath(t *testing.T) {
 				tc.setup(t)
 			}
 
-			canonicalisedPath, err := filepaths.Canonicalise(tc.input)
+			canonicalisedPath, err := filepaths.Canonicalise(tc.input, filepaths.MissingOk)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedPath, canonicalisedPath.String())
 		})
 	}
 }
 
-func TestCanonicalisationFailureDueToNonExistentPaths(t *testing.T) {
+func TestCanonicalisationMissingPaths(t *testing.T) {
+	// When missing is not ok, returns an error
 	var error filepaths.CanonicalisationError
-	_, err := filepaths.Canonicalise("/presumably/nonexistent/path")
+	_, err := filepaths.Canonicalise("/presumably/nonexistent/path", filepaths.MissingNotOk)
 	require.ErrorAs(t, err, &error)
 
 	require.Equal(t, "/presumably/nonexistent/path", error.AttemptedPath)
+
+	// When missing is ok, returns the path
+	canonicalisedPath, err := filepaths.Canonicalise("/presumably/nonexistent/path", filepaths.MissingOk)
+	require.NoError(t, err)
+	require.Equal(t, "/presumably/nonexistent/path", canonicalisedPath.String())
 }
 
 func canonicalisedTempDir(t *testing.T) filepaths.CanonicalisedPath {
 	t.Helper()
 
 	tempDir := t.TempDir()
-	canonicalisedPath, err := filepaths.Canonicalise(tempDir)
+	canonicalisedPath, err := filepaths.Canonicalise(tempDir, filepaths.MissingOk)
 	require.NoError(t, err)
 
 	return canonicalisedPath

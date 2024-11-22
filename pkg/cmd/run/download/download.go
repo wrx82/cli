@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/cli/cli/v2/internal/filepaths"
 	"github.com/cli/cli/v2/pkg/cmd/run/shared"
 	"github.com/cli/cli/v2/pkg/cmdutil"
 	"github.com/cli/cli/v2/pkg/iostreams"
@@ -20,14 +21,14 @@ type DownloadOptions struct {
 
 	DoPrompt       bool
 	RunID          string
-	DestinationDir string
+	DestinationDir filepaths.CanonicalisedPath
 	Names          []string
 	FilePatterns   []string
 }
 
 type platform interface {
 	List(runID string) ([]shared.Artifact, error)
-	Download(url string, dir string) error
+	Download(url string, dir filepaths.CanonicalisedPath) error
 }
 type iprompter interface {
 	MultiSelect(string, []string, []string) ([]int, error)
@@ -75,6 +76,7 @@ func NewCmdDownload(f *cmdutil.Factory, runF func(*DownloadOptions) error) *cobr
 				opts.IO.CanPrompt() {
 				opts.DoPrompt = true
 			}
+
 			// support `-R, --repo` override
 			baseRepo, err := f.BaseRepo()
 			if err != nil {
@@ -84,6 +86,7 @@ func NewCmdDownload(f *cmdutil.Factory, runF func(*DownloadOptions) error) *cobr
 			if err != nil {
 				return err
 			}
+
 			opts.Platform = &apiPlatform{
 				client: httpClient,
 				repo:   baseRepo,
@@ -96,7 +99,12 @@ func NewCmdDownload(f *cmdutil.Factory, runF func(*DownloadOptions) error) *cobr
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.DestinationDir, "dir", "D", ".", "The directory to download artifacts into")
+	// TODO: hmm
+	currentDir, err := filepaths.Canonicalise(".", filepaths.MissingOk)
+	if err != nil {
+		panic(err)
+	}
+	cmdutil.CanonicalisedPathFlag(cmd, &opts.DestinationDir, "dir", "D", currentDir, false, "The directory to download artifacts into")
 	cmd.Flags().StringArrayVarP(&opts.Names, "name", "n", nil, "Download artifacts that match any of the given names")
 	cmd.Flags().StringArrayVarP(&opts.FilePatterns, "pattern", "p", nil, "Download artifacts that match a glob pattern")
 
@@ -167,10 +175,23 @@ func runDownload(opts *DownloadOptions) error {
 		}
 		destDir := opts.DestinationDir
 		if len(wantPatterns) != 0 || len(wantNames) != 1 {
-			destDir = filepath.Join(destDir, a.Name)
+			destDir, err = destDir.Join(a.Name, filepaths.MissingOk)
+			if err != nil {
+				// TODO: consider error
+				return err
+			}
 		}
-		err := opts.Platform.Download(a.DownloadURL, destDir)
+
+		isAncestorOf, err := opts.DestinationDir.IsAncestorOf(destDir)
 		if err != nil {
+			// TODO: hmmm
+			return err
+		}
+		if !isAncestorOf {
+			return fmt.Errorf("error downloading %s: would result in path traversal", a.Name)
+		}
+
+		if err := opts.Platform.Download(a.DownloadURL, destDir); err != nil {
 			return fmt.Errorf("error downloading %s: %w", a.Name, err)
 		}
 		downloaded.Add(a.Name)

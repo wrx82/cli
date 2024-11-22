@@ -6,12 +6,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/cli/cli/v2/internal/filepaths"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_extractZip(t *testing.T) {
 	tmpDir := t.TempDir()
-	extractPath := filepath.Join(tmpDir, "artifact")
+	extractPath, err := filepaths.Canonicalise(filepath.Join(tmpDir, "artifact"), filepaths.MissingOk)
+	require.NoError(t, err)
 
 	zipFile, err := zip.OpenReader("./fixtures/myproject.zip")
 	require.NoError(t, err)
@@ -20,7 +22,10 @@ func Test_extractZip(t *testing.T) {
 	err = extractZip(&zipFile.Reader, extractPath)
 	require.NoError(t, err)
 
-	_, err = os.Stat(filepath.Join(extractPath, "src", "main.go"))
+	mainPath, err := extractPath.Join(filepath.Join("src", "main.go"), filepaths.MissingOk)
+	require.NoError(t, err)
+
+	_, err = os.Stat(mainPath.String())
 	require.NoError(t, err)
 }
 
@@ -45,7 +50,7 @@ func Test_filepathDescendsFrom(t *testing.T) {
 		{
 			name: "abs descendant",
 			args: args{
-				p:   filepath.FromSlash("/var/logs/hoi.txt"),
+				p:   filepath.FromSlash("/dir/logs/hoi.txt"),
 				dir: filepath.FromSlash("/"),
 			},
 			want: true,
@@ -53,24 +58,24 @@ func Test_filepathDescendsFrom(t *testing.T) {
 		{
 			name: "abs trailing slash",
 			args: args{
-				p:   filepath.FromSlash("/var/logs/hoi.txt"),
-				dir: filepath.FromSlash("/var/logs/"),
+				p:   filepath.FromSlash("/dir/logs/hoi.txt"),
+				dir: filepath.FromSlash("/dir/logs/"),
 			},
 			want: true,
 		},
 		{
 			name: "abs mismatch",
 			args: args{
-				p:   filepath.FromSlash("/var/logs/hoi.txt"),
-				dir: filepath.FromSlash("/var/pids"),
+				p:   filepath.FromSlash("/dir/logs/hoi.txt"),
+				dir: filepath.FromSlash("/dir/pids"),
 			},
 			want: false,
 		},
 		{
 			name: "abs partial prefix",
 			args: args{
-				p:   filepath.FromSlash("/var/logs/hoi.txt"),
-				dir: filepath.FromSlash("/var/log"),
+				p:   filepath.FromSlash("/dir/logs/hoi.txt"),
+				dir: filepath.FromSlash("/dir/log"),
 			},
 			want: false,
 		},

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cli/cli/v2/internal/filepaths"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -43,6 +44,36 @@ func StringSliceEnumFlag(cmd *cobra.Command, p *[]string, name, shorthand string
 		return options, cobra.ShellCompDirectiveNoFileComp
 	})
 	return f
+}
+
+// CanonicalisedPathFlag defines a new flag that has a canonicalised file path as its value
+func CanonicalisedPathFlag(cmd *cobra.Command, path *filepaths.CanonicalisedPath, name string, shorthand string, defaultValue filepaths.CanonicalisedPath, missingOk bool, usage string) *pflag.Flag {
+	*path = defaultValue
+	val := &canonicalisedPathValue{missingOk: missingOk, path: path}
+	f := cmd.Flags().VarPF(val, name, shorthand, usage)
+	return f
+}
+
+type canonicalisedPathValue struct {
+	missingOk bool
+	path      *filepaths.CanonicalisedPath
+}
+
+func (v *canonicalisedPathValue) Set(value string) error {
+	path, err := filepaths.Canonicalise(value, filepaths.ParseMissingOk(v.missingOk))
+	if err != nil {
+		return err
+	}
+	*v.path = path
+	return nil
+}
+
+func (v *canonicalisedPathValue) String() string {
+	return (*v.path).String()
+}
+
+func (v *canonicalisedPathValue) Type() string {
+	return "string"
 }
 
 type gitClient interface {

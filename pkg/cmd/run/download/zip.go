@@ -6,7 +6,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/cli/cli/v2/internal/filepaths"
 )
 
 const (
@@ -15,10 +16,20 @@ const (
 	execMode os.FileMode = 0755
 )
 
-func extractZip(zr *zip.Reader, destDir string) error {
+func extractZip(zr *zip.Reader, destDir filepaths.CanonicalisedPath) error {
 	for _, zf := range zr.File {
-		fpath := filepath.Join(destDir, filepath.FromSlash(zf.Name))
-		if !filepathDescendsFrom(fpath, destDir) {
+		fpath, err := destDir.Join(filepath.FromSlash(zf.Name), filepaths.MissingOk)
+		if err != nil {
+			// TODO: consider error
+			return err
+		}
+		contains, err := destDir.IsAncestorOf(fpath)
+		if err != nil {
+			// TODO: consider error
+			return err
+		}
+		if !contains {
+			// TODO: probably error
 			continue
 		}
 		if err := extractZipFile(zf, fpath); err != nil {
@@ -28,10 +39,10 @@ func extractZip(zr *zip.Reader, destDir string) error {
 	return nil
 }
 
-func extractZipFile(zf *zip.File, dest string) (extractErr error) {
+func extractZipFile(zf *zip.File, dest filepaths.CanonicalisedPath) (extractErr error) {
 	zm := zf.Mode()
 	if zm.IsDir() {
-		extractErr = os.MkdirAll(dest, dirMode)
+		extractErr = os.MkdirAll(dest.String(), dirMode)
 		return
 	}
 
@@ -42,14 +53,15 @@ func extractZipFile(zf *zip.File, dest string) (extractErr error) {
 	}
 	defer f.Close()
 
-	if dir := filepath.Dir(dest); dir != "." {
+	// TODO: not sure exactly about this logic tbh, since we might have absolute paths at this point.
+	if dir := filepath.Dir(dest.String()); dir != "." {
 		if extractErr = os.MkdirAll(dir, dirMode); extractErr != nil {
 			return
 		}
 	}
 
 	var df *os.File
-	if df, extractErr = os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, getPerm(zm)); extractErr != nil {
+	if df, extractErr = os.OpenFile(dest.String(), os.O_WRONLY|os.O_CREATE|os.O_EXCL, getPerm(zm)); extractErr != nil {
 		return
 	}
 
@@ -71,13 +83,18 @@ func getPerm(m os.FileMode) os.FileMode {
 }
 
 func filepathDescendsFrom(p, dir string) bool {
-	p = filepath.Clean(p)
-	dir = filepath.Clean(dir)
-	if dir == "." && !filepath.IsAbs(p) {
-		return !strings.HasPrefix(p, ".."+string(filepath.Separator))
+	cP, err := filepaths.Canonicalise(p, filepaths.MissingOk)
+	mustNot(err)
+	cDir, err := filepaths.Canonicalise(dir, filepaths.MissingOk)
+	mustNot(err)
+
+	contains, err := cDir.IsAncestorOf(cP)
+	mustNot(err)
+	return contains
+}
+
+func mustNot(err error) {
+	if err != nil {
+		panic(err)
 	}
-	if !strings.HasSuffix(dir, string(filepath.Separator)) {
-		dir += string(filepath.Separator)
-	}
-	return strings.HasPrefix(p, dir)
 }
