@@ -1,0 +1,34 @@
+# Setup environment variables used for testscript
+env REPO=${SCRIPT_NAME}-${RANDOM_STRING}
+
+# Use gh as a credential helper
+exec gh auth setup-git
+
+# Create a repository to act as upstream with a file so it has a default branch
+exec gh repo create ${ORG}/${REPO} --add-readme --private
+
+# Defer repo cleanup of upstream
+defer gh repo delete --yes ${ORG}/${REPO}
+
+# Create a user fork of repository as opposed to private organization fork
+exec gh repo fork ${ORG}/${REPO}
+
+# Defer repo cleanup of fork
+defer gh repo delete --yes ${REPO}
+
+# Clone the repo
+exec gh repo clone ${REPO}
+cd ${REPO}
+
+# Prepare a branch where changes are pulled from the upstream default branch but pushed to fork
+exec git checkout -b feature-branch upstream/main
+exec git config remote.pushDefault origin
+
+# Create the PR
+exec git commit --allow-empty -m 'Empty Commit'
+exec git push
+exec gh pr create --title 'Feature Title' --body 'Feature Body'
+
+# View the PR
+exec gh pr view
+stdout 'Feature Title'
