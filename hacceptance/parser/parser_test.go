@@ -219,21 +219,15 @@ func TestParseFromFile(t *testing.T) {
 `)
 
 	expectedSecondExpectation := heredoc.Doc(`? Where do you use GitHub? Other
-? Hostname:
-`)
+? Hostname: `)
 
-	expectedThirdExpectation := heredoc.Doc(`? Where do you use GitHub? Other
-? Hostname: my.ghes.com
+	expectedThirdExpectation := heredoc.Doc(`? Hostname: my.ghes.com
 ? What is your preferred protocol for Git operations on this host?  [Use arrows to move, type to filter]
 > HTTPS
   SSH
 `)
 
-	expectedFourthExpectation := heredoc.Doc(`? Where do you use GitHub? Other
-? Hostname: my.ghes.com
-? What is your preferred protocol for Git operations on this host? HTTPS
-? Authenticate Git with your GitHub credentials? (Y/n)
-`)
+	expectedFourthExpectation := heredoc.Doc(`? Authenticate Git with your GitHub credentials? (Y/n) `)
 
 	expectedScript := parser.Script{
 		Interactions: []parser.Interaction{

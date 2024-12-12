@@ -8,12 +8,11 @@ gh auth login
 select Other
 ---
 ? Where do you use GitHub? Other
-? Hostname:
+? Hostname: |
 ---
 
 say my.ghes.com
 ---
-? Where do you use GitHub? Other
 ? Hostname: my.ghes.com
 ? What is your preferred protocol for Git operations on this host?  [Use arrows to move, type to filter]
 > HTTPS
@@ -22,8 +21,5 @@ say my.ghes.com
 
 select HTTPS
 ---
-? Where do you use GitHub? Other
-? Hostname: my.ghes.com
-? What is your preferred protocol for Git operations on this host? HTTPS
-? Authenticate Git with your GitHub credentials? (Y/n)
+? Authenticate Git with your GitHub credentials? (Y/n) |
 ---

@@ -72,13 +72,17 @@ func Parse(s string) (Script, error) {
 			continue
 		}
 
+		tokens := strings.Split(line, " ")
 		// Write next line of expectation block
 		if currentExpectation.building {
-			currentExpectation.contents.WriteString(line + "\n")
+			if tokens[len(tokens)-1] == "|" {
+				currentExpectation.contents.WriteString(strings.TrimRight(line, "|"))
+			} else {
+				currentExpectation.contents.WriteString(line + "\n")
+			}
 			continue
 		}
 
-		tokens := strings.Split(line, " ")
 		if tokens[0] == "select" {
 			interactions = append(interactions, Select{
 				Option: strings.Join(tokens[1:], " "),
