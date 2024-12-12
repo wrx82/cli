@@ -449,6 +449,13 @@ func (m *mergeContext) deleteRemoteBranch() error {
 		return nil
 	}
 
+	// Don't delete the remote branch if there is a merge queue because doing so
+	// can cause the PR to close and be removed from the merge queue.
+	if m.shouldAddToMergeQueue() {
+		fmt.Fprintf(m.opts.IO.ErrOut, "%s Unable to delete remote branch %s: pull request is in merge queue\n", m.cs.WarningIcon(), m.cs.Cyan(m.pr.HeadRefName))
+		return nil
+	}
+
 	if !m.merged {
 		apiClient := api.NewClientFromHTTP(m.httpClient)
 		err := api.BranchDeleteRemote(apiClient, m.baseRepo, m.pr.HeadRefName)
