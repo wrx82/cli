@@ -22,7 +22,6 @@ exec git checkout -b test-feature
 exec git branch --set-upstream-to origin/main
 exec git rev-parse --abbrev-ref test-feature@{upstream}
 stdout origin/main
-exec git push
 
 # Create the PR
 exec git commit --allow-empty -m 'Empty Commit'
