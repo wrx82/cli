@@ -75,7 +75,8 @@ type CreateOptions struct {
 type CreateContext struct {
 	// This struct stores contextual data about the creation process and is for building up enough
 	// data to create a pull request
-	RepoContext        *ghContext.ResolvedRemotes
+	// RepoContext        *ghContext.ResolvedRemotes
+	Remotes            ghContext.Remotes
 	BaseRepo           *api.Repository
 	HeadRepo           ghrepo.Interface
 	BaseTrackingBranch string
@@ -594,31 +595,40 @@ func NewCreateContext(opts *CreateOptions) (*CreateContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := api.NewClientFromHTTP(httpClient)
+	apiClient := api.NewClientFromHTTP(httpClient)
 
 	remotes, err := getRemotes(opts)
 	if err != nil {
 		return nil, err
 	}
-	repoContext, err := ghContext.ResolveRemotesToRepos(remotes, client, opts.RepoOverride)
-	if err != nil {
-		return nil, err
-	}
 
 	var baseRepo *api.Repository
-	if br, err := repoContext.BaseRepo(opts.IO); err == nil {
+	if opts.RepoOverride != "" {
+		// TODO: if RepoNetwork is going to be requested anyway in `repoContext.HeadRepos()`,
+		// consider piggybacking on that result instead of performing a separate lookup
+		r, err := ghrepo.FromFullName(opts.RepoOverride)
+		if err != nil {
+			return nil, err
+		}
+		baseRepo, err = api.GitHubRepo(apiClient, r)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		br, err := ghContext.BaseRepo(apiClient, remotes, opts.IO)
+		if err != nil {
+			return nil, err
+		}
 		if r, ok := br.(*api.Repository); ok {
 			baseRepo = r
 		} else {
 			// TODO: if RepoNetwork is going to be requested anyway in `repoContext.HeadRepos()`,
 			// consider piggybacking on that result instead of performing a separate lookup
-			baseRepo, err = api.GitHubRepo(client, br)
+			baseRepo, err = api.GitHubRepo(apiClient, br)
 			if err != nil {
 				return nil, err
 			}
 		}
-	} else {
-		return nil, err
 	}
 
 	isPushEnabled := false
@@ -661,19 +671,19 @@ func NewCreateContext(opts *CreateOptions) (*CreateContext, error) {
 
 	// otherwise, ask the user for the head repository using info obtained from the API
 	if headRepo == nil && isPushEnabled && opts.IO.CanPrompt() {
-		pushableRepos, err := repoContext.HeadRepos()
+		pushableRepos, err := ghContext.HeadRepos(apiClient, remotes)
 		if err != nil {
 			return nil, err
 		}
 
 		if len(pushableRepos) == 0 {
-			pushableRepos, err = api.RepoFindForks(client, baseRepo, 3)
+			pushableRepos, err = api.RepoFindForks(apiClient, baseRepo, 3)
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		currentLogin, err := api.CurrentLoginName(client, baseRepo.RepoHost())
+		currentLogin, err := api.CurrentLoginName(apiClient, baseRepo.RepoHost())
 		if err != nil {
 			return nil, err
 		}
@@ -735,6 +745,7 @@ func NewCreateContext(opts *CreateOptions) (*CreateContext, error) {
 	}
 
 	return &CreateContext{
+		Remotes:            remotes,
 		BaseRepo:           baseRepo,
 		HeadRepo:           headRepo,
 		BaseBranch:         baseBranch,
@@ -743,8 +754,7 @@ func NewCreateContext(opts *CreateOptions) (*CreateContext, error) {
 		HeadBranchLabel:    headBranchLabel,
 		HeadRemote:         headRemote,
 		IsPushEnabled:      isPushEnabled,
-		RepoContext:        repoContext,
-		Client:             client,
+		Client:             apiClient,
 		GitClient:          gitClient,
 	}, nil
 }
@@ -907,7 +917,7 @@ func handlePush(opts CreateOptions, ctx CreateContext) error {
 	}
 
 	if headRemote == nil && headRepo != nil {
-		headRemote, _ = ctx.RepoContext.RemoteForRepo(headRepo)
+		headRemote, _ = ghContext.RemoteForRepo(headRepo, ctx.Remotes)
 	}
 
 	// There are two cases when an existing remote for the head repo will be
@@ -1030,13 +1040,18 @@ func requestableReviewersForCompletion(opts *CreateOptions) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	repoContext, err := ghContext.ResolveRemotesToRepos(remotes, api.NewClientFromHTTP(httpClient), opts.RepoOverride)
-	if err != nil {
-		return nil, err
-	}
-	baseRepo, err := repoContext.BaseRepo(opts.IO)
-	if err != nil {
-		return nil, err
+
+	var baseRepo ghrepo.Interface
+	if opts.RepoOverride != "" {
+		baseRepo, err = ghrepo.FromFullName(opts.RepoOverride)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		baseRepo, err = ghContext.BaseRepo(api.NewClientFromHTTP(httpClient), remotes, opts.IO)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return shared.RequestableReviewersForCompletion(httpClient, baseRepo)

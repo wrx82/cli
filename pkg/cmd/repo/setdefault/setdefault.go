@@ -152,14 +152,11 @@ func setDefaultRun(opts *SetDefaultOptions) error {
 	if err != nil {
 		return err
 	}
-	apiClient := api.NewClientFromHTTP(httpClient)
-
-	resolvedRemotes, err := context.ResolveRemotesToRepos(remotes, apiClient, "")
-	if err != nil {
-		return err
-	}
-
-	knownRepos, err := resolvedRemotes.NetworkRepos(0)
+	knownRepos, err := context.NetworkRepos(
+		api.NewClientFromHTTP(httpClient),
+		remotes,
+		0,
+	)
 	if err != nil {
 		return err
 	}
@@ -214,7 +211,7 @@ func setDefaultRun(opts *SetDefaultOptions) error {
 	}
 
 	resolution := "base"
-	selectedRemote, _ := resolvedRemotes.RemoteForRepo(selectedRepo)
+	selectedRemote, _ := context.RemoteForRepo(selectedRepo, remotes)
 	if selectedRemote == nil {
 		sort.Stable(remotes)
 		selectedRemote = remotes[0]

@@ -67,11 +67,8 @@ func SmartBaseRepoFunc(f *cmdutil.Factory) func() (ghrepo.Interface, error) {
 		if err != nil {
 			return nil, err
 		}
-		repoContext, err := ghContext.ResolveRemotesToRepos(remotes, apiClient, "")
-		if err != nil {
-			return nil, err
-		}
-		baseRepo, err := repoContext.BaseRepo(f.IOStreams)
+
+		baseRepo, err := ghContext.BaseRepo(apiClient, remotes, f.IOStreams)
 		if err != nil {
 			return nil, err
 		}
